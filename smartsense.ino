@@ -2,92 +2,42 @@
 #include <Firebase_ESP_Client.h>
 #include <DHT.h>
 #include <time.h>
+#include "config.h"
 
-// ========================================
-// Wi-Fi
-// ========================================
-
-#define WIFI_SSID "Daniel Sherin"
-#define WIFI_PASSWORD "daniel1178"
-
-
-// ========================================
-// Firebase
-// ========================================
-
-#define API_KEY "AIzaSyB5YljHzNbJaqtDxxNyuHks-H62lnqmbYY"
-
-#define DATABASE_URL "https://smartsense-743cc-default-rtdb.asia-southeast1.firebasedatabase.app"
-
-
-// ========================================
-// Firebase Login
-// ========================================
-
-#define USER_EMAIL "smartsense.device@gmail.com"
-#define USER_PASSWORD "smart123"
-
-
-// ========================================
-// DHT11
-// ========================================
-
+// ================= DHT11 =================
 #define DHT_PIN 4
 #define DHT_TYPE DHT11
 
 DHT dht(DHT_PIN, DHT_TYPE);
 
-
-// ========================================
-// Firebase objects
-// ========================================
-
+// ================= FIREBASE =================
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
 
-
-// ========================================
-// Simulated sensor values
-// ========================================
-
-int lightLevel;
-bool motionDetected;
-int airQuality;
-
-
-// ========================================
-// Alert control
-// ========================================
-
-bool temperatureAlertSent = false;
-bool humidityAlertSent = false;
-bool airQualityAlertSent = false;
-bool motionAlertSent = false;
-
-
-// ========================================
-// IST TIME
-// ========================================
-
-const char* ntpServer = "pool.ntp.org";
-
+// ================= TIME =================
 const long gmtOffset_sec = 19800;
-
 const int daylightOffset_sec = 0;
 
+// ================= SENSOR VALUES =================
+float temperature = 0;
+float humidity = 0;
 
-// ========================================
-// GET CURRENT TIME
-// ========================================
+int lightLevel = 0;
+bool motionDetected = false;
+int airQuality = 0;
 
+// ================= ALERT FLAGS =================
+bool temperatureAlert = false;
+bool humidityAlert = false;
+bool airQualityAlert = false;
+
+// ================= TIME FUNCTION =================
 String getCurrentTime() {
-
   struct tm timeinfo;
 
   if (!getLocalTime(&timeinfo)) {
-
-    return "TIME_NOT_AVAILABLE";
+    return "Time unavailable";
   }
 
   char timeString[30];
@@ -102,13 +52,8 @@ String getCurrentTime() {
   return String(timeString);
 }
 
-
-// ========================================
-// GET UNIX TIMESTAMP
-// ========================================
-
+// ================= UNIX TIMESTAMP =================
 unsigned long getUnixTimestamp() {
-
   time_t now;
 
   time(&now);
@@ -116,113 +61,55 @@ unsigned long getUnixTimestamp() {
   return (unsigned long)now;
 }
 
+// ================= SAVE ALERT =================
+void saveAlert(String type, String message, float value) {
 
-// ========================================
-// SAVE ALERT
-// ========================================
-
-void saveAlert(
-  String type,
-  String message,
-  float value
-) {
-
-  FirebaseJson alertData;
-
-  alertData.set("type", type);
-
-  alertData.set("message", message);
-
-  alertData.set("value", value);
-
-  alertData.set(
-    "timestamp",
-    getCurrentTime()
-  );
-
-  alertData.set(
-    "timestampUnix",
-    getUnixTimestamp()
-  );
-
-
-  if (Firebase.RTDB.pushJSON(
-        &fbdo,
-        "/devices/ESP32_01/alerts",
-        &alertData
-      )) {
-
-    Serial.println();
-
-    Serial.println("🚨 ALERT SAVED!");
-
-    Serial.print("Type    : ");
-
-    Serial.println(type);
-
-    Serial.print("Message : ");
-
-    Serial.println(message);
-
-    Serial.print("Value   : ");
-
-    Serial.println(value);
-
-    Serial.print("Time    : ");
-
-    Serial.println(getCurrentTime());
-
+  if (!Firebase.ready()) {
+    return;
   }
 
-  else {
+  FirebaseJson json;
+
+  json.set("type", type);
+  json.set("message", message);
+  json.set("value", value);
+  json.set("timestamp", getUnixTimestamp());
+  json.set("time", getCurrentTime());
+
+  String path = "/devices/ESP32_01/alerts";
+
+  if (Firebase.RTDB.pushJSON(&fbdo, path, &json)) {
+
+    Serial.println("Alert saved to Firebase");
+
+  } else {
 
     Serial.print("Alert save failed: ");
-
     Serial.println(fbdo.errorReason());
   }
 }
 
-
-// ========================================
-// SETUP
-// ========================================
-
+// ================= SETUP =================
 void setup() {
 
   Serial.begin(115200);
 
   delay(1000);
 
-
   Serial.println();
+  Serial.println("=================================");
+  Serial.println("        SMARTSENSE ESP32");
+  Serial.println("=================================");
 
-  Serial.println("================================");
-
-  Serial.println("       SMARTSENSE FIREBASE");
-
-  Serial.println("================================");
-
-
-  // ------------------------------------
-  // Start DHT11
-  // ------------------------------------
-
+  // Start DHT
   dht.begin();
 
   Serial.println("DHT11 initialized");
 
+  // ================= WIFI =================
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  // ------------------------------------
-  // Connect Wi-Fi
-  // ------------------------------------
-
-  Serial.print("Connecting to Wi-Fi");
-
-  WiFi.begin(
-    WIFI_SSID,
-    WIFI_PASSWORD
-  );
-
+  Serial.print("Connecting to WiFi");
 
   while (WiFi.status() != WL_CONNECTED) {
 
@@ -231,459 +118,203 @@ void setup() {
     Serial.print(".");
   }
 
-
   Serial.println();
-
-  Serial.println("Wi-Fi Connected!");
-
+  Serial.println("WiFi connected!");
 
   Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
 
-  Serial.println(
-    WiFi.localIP()
-  );
-
-
-  // ====================================
-  // START NTP
-  // ====================================
-
-  Serial.println();
-
-  Serial.println("Synchronizing time...");
-
-
+  // ================= TIME =================
   configTime(
     gmtOffset_sec,
     daylightOffset_sec,
-    ntpServer
+    "pool.ntp.org",
+    "time.nist.gov"
   );
 
+  Serial.println("Time synchronization started");
 
-  struct tm timeinfo;
-
-
-  if (getLocalTime(&timeinfo)) {
-
-    Serial.println("Time synchronized!");
-
-    Serial.print("Current IST time: ");
-
-    Serial.println(
-      getCurrentTime()
-    );
-
-  }
-
-  else {
-
-    Serial.println(
-      "Time synchronization failed!"
-    );
-  }
-
-
-  // ====================================
-  // FIREBASE
-  // ====================================
-
+  // ================= FIREBASE =================
   config.api_key = API_KEY;
-
   config.database_url = DATABASE_URL;
 
-
   auth.user.email = USER_EMAIL;
-
   auth.user.password = USER_PASSWORD;
 
-
-  Firebase.begin(
-    &config,
-    &auth
-  );
+  Firebase.begin(&config, &auth);
 
   Firebase.reconnectWiFi(true);
 
+  Serial.println("Firebase initialized");
 
-  Serial.println(
-    "Firebase initialized"
-  );
+  Serial.println();
+  Serial.println("SmartSense is ready!");
+  Serial.println();
 }
 
-
-// ========================================
-// LOOP
-// ========================================
-
+// ================= LOOP =================
 void loop() {
 
+  // ================= READ DHT11 =================
+  humidity = dht.readHumidity();
+  temperature = dht.readTemperature();
 
-  // ======================================
-  // READ DHT11
-  // ======================================
+  if (isnan(humidity) || isnan(temperature)) {
 
-  float temperature =
-    dht.readTemperature();
-
-
-  float humidity =
-    dht.readHumidity();
-
-
-  if (
-    isnan(temperature) ||
-    isnan(humidity)
-  ) {
-
-    Serial.println(
-      "DHT11 reading failed"
-    );
+    Serial.println("Failed to read DHT11!");
 
     delay(2000);
 
     return;
   }
 
+  // ================= SIMULATED SENSORS =================
+  lightLevel = random(20, 100);
 
-  // ======================================
-  // SIMULATED VALUES
-  // ======================================
+  motionDetected = random(0, 2);
 
-  lightLevel =
-    random(20, 101);
+  airQuality = random(40, 100);
 
+  // ================= SERIAL OUTPUT =================
+  Serial.println("---------------------------------");
+  Serial.println("        SENSOR DATA");
+  Serial.println("---------------------------------");
 
-  motionDetected =
-    random(0, 2);
+  Serial.print("Temperature : ");
+  Serial.print(temperature);
+  Serial.println(" °C");
 
+  Serial.print("Humidity    : ");
+  Serial.print(humidity);
+  Serial.println(" %");
 
-  airQuality =
-    random(40, 101);
+  Serial.print("Light Level : ");
+  Serial.println(lightLevel);
 
-
-  // ======================================
-  // SERIAL OUTPUT
-  // ======================================
-
-  Serial.println();
-
-  Serial.println(
-    "----------- SENSOR DATA -----------"
-  );
-
-
-  Serial.print(
-    "Time        : "
-  );
-
-  Serial.println(
-    getCurrentTime()
-  );
-
-
-  Serial.print(
-    "Temperature : "
-  );
-
-  Serial.print(
-    temperature
-  );
-
-  Serial.println(
-    " °C"
-  );
-
-
-  Serial.print(
-    "Humidity    : "
-  );
-
-  Serial.print(
-    humidity
-  );
-
-  Serial.println(
-    " %"
-  );
-
-
-  Serial.print(
-    "Light Level : "
-  );
-
-  Serial.println(
-    lightLevel
-  );
-
-
-  Serial.print(
-    "Motion      : "
-  );
-
+  Serial.print("Motion      : ");
 
   if (motionDetected) {
-
-    Serial.println(
-      "DETECTED"
-    );
-
+    Serial.println("DETECTED");
+  } else {
+    Serial.println("NOT DETECTED");
   }
 
-  else {
+  Serial.print("Air Quality : ");
+  Serial.println(airQuality);
 
-    Serial.println(
-      "NOT DETECTED"
-    );
-  }
+  Serial.print("Time        : ");
+  Serial.println(getCurrentTime());
 
-
-  Serial.print(
-    "Air Quality : "
-  );
-
-  Serial.println(
-    airQuality
-  );
-
-
-  // ======================================
-  // FIREBASE
-  // ======================================
-
+  // ================= FIREBASE =================
   if (Firebase.ready()) {
 
-
-    // ====================================
-    // CURRENT VALUES
-    // ====================================
+    String basePath = "/devices/ESP32_01/current";
 
     Firebase.RTDB.setFloat(
       &fbdo,
-      "/devices/ESP32_01/temperature",
+      basePath + "/temperature",
       temperature
     );
 
-
     Firebase.RTDB.setFloat(
       &fbdo,
-      "/devices/ESP32_01/humidity",
+      basePath + "/humidity",
       humidity
     );
 
-
     Firebase.RTDB.setInt(
       &fbdo,
-      "/devices/ESP32_01/light",
+      basePath + "/lightLevel",
       lightLevel
     );
-
 
     Firebase.RTDB.setBool(
       &fbdo,
-      "/devices/ESP32_01/motion",
+      basePath + "/motionDetected",
       motionDetected
     );
-
 
     Firebase.RTDB.setInt(
       &fbdo,
-      "/devices/ESP32_01/airQuality",
+      basePath + "/airQuality",
       airQuality
     );
 
-
-    Serial.println(
-      "Current values uploaded!"
-    );
-
-
-    // ====================================
-    // HISTORY
-    // ====================================
-
-    FirebaseJson historyData;
-
-
-    historyData.set(
-      "temperature",
-      temperature
-    );
-
-
-    historyData.set(
-      "humidity",
-      humidity
-    );
-
-
-    historyData.set(
-      "light",
-      lightLevel
-    );
-
-
-    historyData.set(
-      "motion",
-      motionDetected
-    );
-
-
-    historyData.set(
-      "airQuality",
-      airQuality
-    );
-
-
-    historyData.set(
-      "timestamp",
+    Firebase.RTDB.setString(
+      &fbdo,
+      basePath + "/timestamp",
       getCurrentTime()
     );
 
+    // ================= HISTORY =================
+    FirebaseJson historyData;
 
-    historyData.set(
-      "timestampUnix",
-      getUnixTimestamp()
+    historyData.set("temperature", temperature);
+    historyData.set("humidity", humidity);
+    historyData.set("lightLevel", lightLevel);
+    historyData.set("motionDetected", motionDetected);
+    historyData.set("airQuality", airQuality);
+    historyData.set("timestamp", getUnixTimestamp());
+    historyData.set("time", getCurrentTime());
+
+    Firebase.RTDB.pushJSON(
+      &fbdo,
+      "/devices/ESP32_01/history",
+      &historyData
     );
 
+    // ================= TEMPERATURE ALERT =================
+    if (temperature > 35 && !temperatureAlert) {
 
-    if (
-      Firebase.RTDB.pushJSON(
-        &fbdo,
-        "/devices/ESP32_01/history",
-        &historyData
-      )
-    ) {
-
-      Serial.println(
-        "History saved!"
+      saveAlert(
+        "Temperature",
+        "High temperature detected",
+        temperature
       );
 
+      temperatureAlert = true;
     }
 
-    else {
+    if (temperature <= 35) {
+      temperatureAlert = false;
+    }
 
-      Serial.print(
-        "History upload failed: "
+    // ================= HUMIDITY ALERT =================
+    if (humidity > 80 && !humidityAlert) {
+
+      saveAlert(
+        "Humidity",
+        "High humidity detected",
+        humidity
       );
 
-      Serial.println(
-        fbdo.errorReason()
+      humidityAlert = true;
+    }
+
+    if (humidity <= 80) {
+      humidityAlert = false;
+    }
+
+    // ================= AIR QUALITY ALERT =================
+    if (airQuality < 50 && !airQualityAlert) {
+
+      saveAlert(
+        "Air Quality",
+        "Poor air quality detected",
+        airQuality
       );
+
+      airQualityAlert = true;
     }
 
-
-    // ====================================
-    // TEMPERATURE ALERT
-    // ====================================
-
-    if (temperature >= 35) {
-
-      if (!temperatureAlertSent) {
-
-        saveAlert(
-          "HIGH_TEMPERATURE",
-          "Temperature is too high",
-          temperature
-        );
-
-        temperatureAlertSent = true;
-      }
-
+    if (airQuality >= 50) {
+      airQualityAlert = false;
     }
 
-    else {
-
-      temperatureAlertSent = false;
-    }
-
-
-    // ====================================
-    // HUMIDITY ALERT
-    // ====================================
-
-    if (humidity >= 80) {
-
-      if (!humidityAlertSent) {
-
-        saveAlert(
-          "HIGH_HUMIDITY",
-          "Humidity is too high",
-          humidity
-        );
-
-        humidityAlertSent = true;
-      }
-
-    }
-
-    else {
-
-      humidityAlertSent = false;
-    }
-
-
-    // ====================================
-    // AIR QUALITY ALERT
-    // ====================================
-
-    if (airQuality <= 50) {
-
-      if (!airQualityAlertSent) {
-
-        saveAlert(
-          "POOR_AIR_QUALITY",
-          "Air quality is poor",
-          airQuality
-        );
-
-        airQualityAlertSent = true;
-      }
-
-    }
-
-    else {
-
-      airQualityAlertSent = false;
-    }
-
-
-    // ====================================
-    // MOTION ALERT
-    // ====================================
-
-    if (motionDetected) {
-
-      if (!motionAlertSent) {
-
-        saveAlert(
-          "MOTION_DETECTED",
-          "Motion detected",
-          1
-        );
-
-        motionAlertSent = true;
-      }
-
-    }
-
-    else {
-
-      motionAlertSent = false;
-    }
-
+    Serial.println("Firebase updated successfully");
   }
 
-  else {
-
-    Serial.println(
-      "Firebase not ready"
-    );
-  }
-
-
-  // ======================================
-  // WAIT 5 SECONDS
-  // ======================================
+  Serial.println();
 
   delay(5000);
 }
