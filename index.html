@@ -1,0 +1,1321 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>SmartSense Dashboard</title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+
+        /* ================= HEADER ================= */
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+            color: #cbd5e1;
+        }
+
+
+        /* ================= STATUS ================= */
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            font-weight: bold;
+        }
+
+
+        /* ================= SENSOR CARDS ================= */
+
+        .dashboard {
+
+            max-width: 1100px;
+
+            margin: auto;
+
+            padding: 20px;
+
+            display: grid;
+
+            grid-template-columns:
+                repeat(
+                    auto-fit,
+                    minmax(200px, 1fr)
+                );
+
+            gap: 20px;
+        }
+
+
+        .card {
+
+            background: white;
+
+            padding: 25px;
+
+            border-radius: 15px;
+
+            text-align: center;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.08);
+        }
+
+
+        .card h2 {
+
+            margin-top: 0;
+
+            font-size: 18px;
+        }
+
+
+        .value {
+
+            font-size: 30px;
+
+            font-weight: bold;
+
+            margin-top: 10px;
+        }
+
+
+        /* ================= GRAPHS ================= */
+
+        .graphs {
+
+            max-width: 1100px;
+
+            margin: auto;
+
+            padding: 20px;
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 20px;
+        }
+
+
+        .graph-card {
+
+            background: white;
+
+            padding: 20px;
+
+            border-radius: 15px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.08);
+        }
+
+
+        .graph-card h2 {
+
+            margin-top: 0;
+
+            text-align: center;
+        }
+
+
+        canvas {
+
+            width: 100%;
+
+            height: 300px;
+
+            display: block;
+        }
+
+
+        /* ================= ALERTS ================= */
+
+        .alerts-section {
+
+            max-width: 1100px;
+
+            margin: auto;
+
+            padding: 20px;
+        }
+
+
+        .alerts-container {
+
+            background: white;
+
+            border-radius: 15px;
+
+            padding: 20px;
+
+            box-shadow:
+                0 5px 20px
+                rgba(0,0,0,0.08);
+        }
+
+
+        .alerts-container h2 {
+
+            margin-top: 0;
+
+            text-align: center;
+        }
+
+
+        .alert {
+
+            padding: 15px;
+
+            margin-bottom: 12px;
+
+            border-radius: 10px;
+
+            border-left: 5px solid #ef4444;
+
+            background: #fef2f2;
+        }
+
+
+        .alert:last-child {
+
+            margin-bottom: 0;
+        }
+
+
+        .alert-title {
+
+            font-weight: bold;
+
+            font-size: 17px;
+
+            margin-bottom: 5px;
+        }
+
+
+        .alert-message {
+
+            margin-bottom: 5px;
+        }
+
+
+        .alert-value {
+
+            font-weight: bold;
+        }
+
+
+        .alert-time {
+
+            font-size: 13px;
+
+            color: #666;
+
+            margin-top: 5px;
+        }
+
+
+        .no-alerts {
+
+            text-align: center;
+
+            color: #777;
+
+            padding: 20px;
+        }
+
+
+        /* ================= MOBILE ================= */
+
+        @media (max-width: 700px) {
+
+            .graphs {
+
+                grid-template-columns: 1fr;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- ================= HEADER ================= -->
+
+<header>
+
+    <h1>🏠 SmartSense</h1>
+
+    <p>
+        Smart Home Environmental Monitoring System
+    </p>
+
+</header>
+
+
+<!-- ================= CONNECTION STATUS ================= -->
+
+<div
+    class="status"
+    id="status"
+>
+
+    Connecting to Firebase...
+
+</div>
+
+
+<!-- ================= SENSOR CARDS ================= -->
+
+<div class="dashboard">
+
+
+    <div class="card">
+
+        <h2>🌡️ Temperature</h2>
+
+        <div
+            class="value"
+            id="temperature"
+        >
+            -- °C
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>💧 Humidity</h2>
+
+        <div
+            class="value"
+            id="humidity"
+        >
+            -- %
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>💡 Light Level</h2>
+
+        <div
+            class="value"
+            id="light"
+        >
+            --
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>🚶 Motion</h2>
+
+        <div
+            class="value"
+            id="motion"
+        >
+            --
+        </div>
+
+    </div>
+
+
+    <div class="card">
+
+        <h2>🌫️ Air Quality</h2>
+
+        <div
+            class="value"
+            id="airQuality"
+        >
+            --
+        </div>
+
+    </div>
+
+
+</div>
+
+
+<!-- ================= GRAPHS ================= -->
+
+<div class="graphs">
+
+
+    <div class="graph-card">
+
+        <h2>
+            🌡️ Temperature History
+        </h2>
+
+        <canvas
+            id="temperatureChart"
+        ></canvas>
+
+    </div>
+
+
+    <div class="graph-card">
+
+        <h2>
+            💧 Humidity History
+        </h2>
+
+        <canvas
+            id="humidityChart"
+        ></canvas>
+
+    </div>
+
+
+</div>
+
+
+<!-- ================= ALERTS ================= -->
+
+<div class="alerts-section">
+
+    <div class="alerts-container">
+
+        <h2>
+            🚨 Recent Alerts
+        </h2>
+
+        <div id="alerts">
+
+            <div class="no-alerts">
+                Loading alerts...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script type="module">
+
+
+    // ==========================================
+    // FIREBASE IMPORTS
+    // ==========================================
+
+    import { initializeApp }
+
+    from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+
+
+    import {
+
+        getDatabase,
+
+        ref,
+
+        onValue
+
+    }
+
+    from "https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js";
+
+
+    import {
+
+        getAuth,
+
+        signInWithEmailAndPassword
+
+    }
+
+    from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
+
+
+    // ==========================================
+    // FIREBASE CONFIGURATION
+    // ==========================================
+
+    const firebaseConfig = {
+
+        apiKey: "AIzaSyB5YljHzNbJaqtDxxNyuHks-H62lnqmbYY",
+
+        authDomain: "smartsense-743cc.firebaseapp.com",
+
+        databaseURL: "https://smartsense-743cc-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+        projectId: "smartsense-743cc",
+
+        storageBucket: "smartsense-743cc.firebasestorage.app",
+
+        messagingSenderId:
+            "780847497981",
+
+        appId: "1:780847497981:web:aebb411c0c5ae5cbfa7494"
+
+    };
+
+
+    // ==========================================
+    // INITIALIZE FIREBASE
+    // ==========================================
+
+    const app =
+        initializeApp(firebaseConfig);
+
+
+    const database =
+        getDatabase(app);
+
+
+    const auth =
+        getAuth(app);
+
+
+    // ==========================================
+    // FIREBASE LOGIN
+    // ==========================================
+
+    const USER_EMAIL =
+        "smartsense.device@gmail.com";
+
+
+    const USER_PASSWORD =
+        "smart123";
+
+
+    signInWithEmailAndPassword(
+
+        auth,
+
+        USER_EMAIL,
+
+        USER_PASSWORD
+
+    )
+
+    .then(() => {
+
+
+        console.log(
+            "Firebase login successful"
+        );
+
+
+        document.getElementById(
+            "status"
+        ).innerHTML =
+            "🟢 Connected to Firebase";
+
+
+        startDashboard();
+
+
+    })
+
+
+    .catch((error) => {
+
+
+        console.error(error);
+
+
+        document.getElementById(
+            "status"
+        ).innerHTML =
+            "🔴 Firebase Login Failed";
+
+    });
+
+
+    // ==========================================
+    // START DASHBOARD
+    // ==========================================
+
+    function startDashboard() {
+
+
+        // ======================================
+        // CURRENT SENSOR DATA
+        // ======================================
+
+        const deviceRef =
+
+            ref(
+                database,
+                "devices/ESP32_01"
+            );
+
+
+        onValue(
+
+            deviceRef,
+
+            (snapshot) => {
+
+
+                const data =
+                    snapshot.val();
+
+
+                if (!data) {
+
+                    return;
+
+                }
+
+
+                // Temperature
+
+                if (
+                    data.temperature
+                    !== undefined
+                ) {
+
+                    document.getElementById(
+                        "temperature"
+                    ).innerText =
+
+                        Number(
+                            data.temperature
+                        ).toFixed(2)
+                        + " °C";
+
+                }
+
+
+                // Humidity
+
+                if (
+                    data.humidity
+                    !== undefined
+                ) {
+
+                    document.getElementById(
+                        "humidity"
+                    ).innerText =
+
+                        Number(
+                            data.humidity
+                        ).toFixed(2)
+                        + " %";
+
+                }
+
+
+                // Light
+
+                if (
+                    data.light
+                    !== undefined
+                ) {
+
+                    document.getElementById(
+                        "light"
+                    ).innerText =
+                        data.light;
+
+                }
+
+
+                // Motion
+
+                if (
+                    data.motion
+                    !== undefined
+                ) {
+
+                    document.getElementById(
+                        "motion"
+                    ).innerText =
+
+                        data.motion
+                        ? "DETECTED"
+                        : "NOT DETECTED";
+
+                }
+
+
+                // Air Quality
+
+                if (
+                    data.airQuality
+                    !== undefined
+                ) {
+
+                    document.getElementById(
+                        "airQuality"
+                    ).innerText =
+                        data.airQuality;
+
+                }
+
+            }
+
+        );
+
+
+        // ======================================
+        // SENSOR HISTORY
+        // ======================================
+
+        const historyRef =
+
+            ref(
+                database,
+                "devices/ESP32_01/history"
+            );
+
+
+        onValue(
+
+            historyRef,
+
+            (snapshot) => {
+
+
+                const historyData =
+                    snapshot.val();
+
+
+                if (!historyData) {
+
+                    return;
+
+                }
+
+
+                const records =
+                    Object.values(
+                        historyData
+                    );
+
+
+                // Sort by timestamp
+
+                records.sort(
+
+                    (a, b) =>
+
+                        Number(
+                            a.timestampUnix || 0
+                        )
+                        -
+                        Number(
+                            b.timestampUnix || 0
+                        )
+
+                );
+
+
+                // Last 20 readings
+
+                const recentRecords =
+                    records.slice(-20);
+
+
+                // Temperature
+
+                const temperatures =
+
+                    recentRecords.map(
+
+                        record =>
+
+                            Number(
+                                record.temperature
+                            )
+
+                    );
+
+
+                drawGraph(
+
+                    "temperatureChart",
+
+                    temperatures,
+
+                    "Temperature (°C)"
+
+                );
+
+
+                // Humidity
+
+                const humidities =
+
+                    recentRecords.map(
+
+                        record =>
+
+                            Number(
+                                record.humidity
+                            )
+
+                    );
+
+
+                drawGraph(
+
+                    "humidityChart",
+
+                    humidities,
+
+                    "Humidity (%)"
+
+                );
+
+            }
+
+        );
+
+
+        // ======================================
+        // ALERTS
+        // ======================================
+
+        const alertsRef =
+
+            ref(
+                database,
+                "devices/ESP32_01/alerts"
+            );
+
+
+        onValue(
+
+            alertsRef,
+
+            (snapshot) => {
+
+
+                const alertsData =
+                    snapshot.val();
+
+
+                const alertsContainer =
+                    document.getElementById(
+                        "alerts"
+                    );
+
+
+                if (!alertsData) {
+
+
+                    alertsContainer.innerHTML =
+
+                        `<div class="no-alerts">
+                            ✅ No alerts
+                        </div>`;
+
+                    return;
+
+                }
+
+
+                // Convert Firebase object
+                // into an array
+
+                const alerts =
+
+                    Object.values(
+                        alertsData
+                    );
+
+
+                // Sort newest first
+
+                alerts.sort(
+
+                    (a, b) =>
+
+                        Number(
+                            b.timestampUnix || 0
+                        )
+                        -
+                        Number(
+                            a.timestampUnix || 0
+                        )
+
+                );
+
+
+                // Show last 10 alerts
+
+                const recentAlerts =
+                    alerts.slice(0, 10);
+
+
+                alertsContainer.innerHTML =
+                    "";
+
+
+                recentAlerts.forEach(
+
+                    alert => {
+
+
+                        const alertElement =
+                            document.createElement(
+                                "div"
+                            );
+
+
+                        alertElement.className =
+                            "alert";
+
+
+                        const title =
+                            alert.type
+                            || "ALERT";
+
+
+                        const message =
+                            alert.message
+                            || "Sensor alert";
+
+
+                        const value =
+                            alert.value
+                            !== undefined
+                            ? alert.value
+                            : "--";
+
+
+                        const time =
+                            alert.timestamp
+                            || "TIME NOT AVAILABLE";
+
+
+                        alertElement.innerHTML = `
+
+                            <div class="alert-title">
+                                🚨 ${title}
+                            </div>
+
+                            <div class="alert-message">
+                                ${message}
+                            </div>
+
+                            <div class="alert-value">
+                                Value: ${value}
+                            </div>
+
+                            <div class="alert-time">
+                                🕐 ${time}
+                            </div>
+
+                        `;
+
+
+                        alertsContainer.appendChild(
+                            alertElement
+                        );
+
+                    }
+
+                );
+
+            }
+
+        );
+
+    }
+
+
+    // ==========================================
+    // DRAW GRAPH
+    // ==========================================
+
+    function drawGraph(
+
+        canvasId,
+
+        values,
+
+        label
+
+    ) {
+
+
+        const canvas =
+            document.getElementById(
+                canvasId
+            );
+
+
+        const ctx =
+            canvas.getContext("2d");
+
+
+        const width =
+            canvas.clientWidth;
+
+
+        const height =
+            canvas.clientHeight;
+
+
+        canvas.width =
+            width;
+
+
+        canvas.height =
+            height;
+
+
+        ctx.clearRect(
+            0,
+            0,
+            width,
+            height
+        );
+
+
+        if (
+            values.length === 0
+        ) {
+
+            return;
+
+        }
+
+
+        // ======================================
+        // MINIMUM AND MAXIMUM
+        // ======================================
+
+        let minValue =
+            Math.min(...values);
+
+
+        let maxValue =
+            Math.max(...values);
+
+
+        if (
+            minValue === maxValue
+        ) {
+
+            minValue -= 1;
+
+            maxValue += 1;
+
+        }
+
+
+        const padding = 45;
+
+
+        // ======================================
+        // AXES
+        // ======================================
+
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+            padding,
+            20
+        );
+
+
+        ctx.lineTo(
+            padding,
+            height - padding
+        );
+
+
+        ctx.lineTo(
+            width - 20,
+            height - padding
+        );
+
+
+        ctx.stroke();
+
+
+        // ======================================
+        // GRAPH LINE
+        // ======================================
+
+        ctx.beginPath();
+
+
+        values.forEach(
+
+            (value, index) => {
+
+
+                const x =
+
+                    padding
+
+                    +
+
+                    (
+                        index
+                        /
+                        Math.max(
+                            values.length - 1,
+                            1
+                        )
+                    )
+
+                    *
+
+                    (
+                        width
+                        -
+                        padding
+                        -
+                        20
+                    );
+
+
+                const y =
+
+                    height
+                    -
+                    padding
+
+                    -
+
+                    (
+                        (
+                            value
+                            -
+                            minValue
+                        )
+
+                        /
+
+                        (
+                            maxValue
+                            -
+                            minValue
+                        )
+                    )
+
+                    *
+
+                    (
+                        height
+                        -
+                        padding
+                        -
+                        20
+                    );
+
+
+                if (
+                    index === 0
+                ) {
+
+                    ctx.moveTo(
+                        x,
+                        y
+                    );
+
+                }
+
+                else {
+
+                    ctx.lineTo(
+                        x,
+                        y
+                    );
+
+                }
+
+            }
+
+        );
+
+
+        ctx.stroke();
+
+
+        // ======================================
+        // DATA POINTS
+        // ======================================
+
+        values.forEach(
+
+            (value, index) => {
+
+
+                const x =
+
+                    padding
+
+                    +
+
+                    (
+                        index
+                        /
+                        Math.max(
+                            values.length - 1,
+                            1
+                        )
+                    )
+
+                    *
+
+                    (
+                        width
+                        -
+                        padding
+                        -
+                        20
+                    );
+
+
+                const y =
+
+                    height
+                    -
+                    padding
+
+                    -
+
+                    (
+                        (
+                            value
+                            -
+                            minValue
+                        )
+
+                        /
+
+                        (
+                            maxValue
+                            -
+                            minValue
+                        )
+                    )
+
+                    *
+
+                    (
+                        height
+                        -
+                        padding
+                        -
+                        20
+                    );
+
+
+                ctx.beginPath();
+
+
+                ctx.arc(
+                    x,
+                    y,
+                    4,
+                    0,
+                    Math.PI * 2
+                );
+
+
+                ctx.fill();
+
+            }
+
+        );
+
+
+        // ======================================
+        // LABEL
+        // ======================================
+
+        ctx.font =
+            "14px Arial";
+
+
+        ctx.fillText(
+            label,
+            padding,
+            15
+        );
+
+
+        // ======================================
+        // MIN / MAX
+        // ======================================
+
+        ctx.font =
+            "12px Arial";
+
+
+        ctx.fillText(
+
+            maxValue.toFixed(1),
+
+            5,
+
+            30
+
+        );
+
+
+        ctx.fillText(
+
+            minValue.toFixed(1),
+
+            5,
+
+            height - padding
+
+        );
+
+    }
+
+</script>
+
+
+</body>
+
+</html>
+```
+
